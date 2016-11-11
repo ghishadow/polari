@@ -116,7 +116,6 @@ const ServerRoomList = new Lang.Class({
         });
 
         this._list = new Gtk.ListBox({ visible: true });
-        this._list.set_sort_func(Lang.bind(this, this._sort));
         this._list.set_header_func(Lang.bind(this, this._updateHeader));
         this._list.connect('row-activated',
                                Lang.bind(this, this._onRowActivated));
@@ -136,11 +135,6 @@ const ServerRoomList = new Lang.Class({
 
     _onRowActivated: function(list, row) {
         row.activate();
-    },
-
-    _sort: function(row1, row2) {
-        return row2.info.get_members_count(null) -
-               row1.info.get_members_count(null);
     },
 
     get selectedRooms() {
@@ -168,7 +162,16 @@ const ServerRoomList = new Lang.Class({
             return;
 
         this._list.foreach(function(w) { w.destroy(); });
-        this._manager.getRoomInfos(account).forEach(roomInfo => {
+
+        let roomInfos = this._manager.getRoomInfos(account);
+        roomInfos.sort((info1, info2) => {
+            let count1 = info1.get_members_count(null);
+            let count2 = info2.get_members_count(null);
+            if (count1 != count2)
+                return count2 - count1;
+            return info1.get_name().localeCompare(info2.get_name());
+        });
+        roomInfos.forEach(roomInfo => {
             let row = new ServerRoomRow({ info: roomInfo });
             row.connect('notify::checked', () => { this.notify('can-join'); });
             this._list.add(row);
