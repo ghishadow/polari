@@ -5,6 +5,7 @@ const Tp = imports.gi.TelepathyGLib;
 
 const AccountsMonitor = imports.accountsMonitor;
 const Lang = imports.lang;
+const Mainloop = imports.mainloop;
 const Signals = imports.signals;
 
 let _singleton = null;
@@ -108,6 +109,7 @@ const ServerRoomList = new Lang.Class({
 
     _init: function(params) {
         this._account = null;
+        this._pendingInfos = [];
 
         this.parent(params);
 
@@ -130,7 +132,8 @@ const ServerRoomList = new Lang.Class({
     },
 
     get loading() {
-        return this._manager.isLoading(this._account);
+        return this._pendingInfos.length ||
+               this._manager.isLoading(this._account);
     },
 
     _onRowActivated: function(list, row) {
@@ -163,6 +166,9 @@ const ServerRoomList = new Lang.Class({
 
         this._list.foreach(function(w) { w.destroy(); });
 
+        if (this._timeoutId)
+            Mainloop.source_remove(this._timeoutId);
+
         let roomInfos = this._manager.getRoomInfos(account);
         roomInfos.sort((info1, info2) => {
             let count1 = info1.get_members_count(null);
@@ -171,10 +177,22 @@ const ServerRoomList = new Lang.Class({
                 return count2 - count1;
             return info1.get_name().localeCompare(info2.get_name());
         });
-        roomInfos.forEach(roomInfo => {
-            let row = new ServerRoomRow({ info: roomInfo });
-            row.connect('notify::checked', () => { this.notify('can-join'); });
-            this._list.add(row);
+        this._pendingInfos = roomInfos;
+
+        this.notify('loading');
+
+        this._timeoutId = Mainloop.timeout_add(500, () => {
+            this._pendingInfos.splice(0, 50).forEach(roomInfo => {
+                let row = new ServerRoomRow({ info: roomInfo });
+                row.connect('notify::checked', () => { this.notify('can-join'); });
+                this._list.add(row);
+            });
+            if (this._pendingInfos.length)
+                return GLib.SOURCE_CONTINUE;
+
+            this._timeoutId = 0;
+            this.notify('loading');
+            return GLib.SOURCE_REMOVE;
         });
     }
 });
