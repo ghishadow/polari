@@ -227,41 +227,32 @@ const ServerRoomList = new Lang.Class({
                 return count2 - count1;
             return info1.get_name().localeCompare(info2.get_name());
         });
-        this._pendingInfos = roomInfos;
 
         this.notify('loading');
 
         let roomManager = RoomManager.getDefault();
+        roomInfos.forEach(roomInfo => {
+            let store = this._list.model;
 
-        this._timeoutId = Mainloop.timeout_add(500, () => {
-            this._pendingInfos.splice(0, 50).forEach(roomInfo => {
-                let store = this._list.model;
+            let name = roomInfo.get_name();
+            if (name[0] == '#')
+                name = name.substr(1, name.length);
 
-                let name = roomInfo.get_name();
-                if (name[0] == '#')
-                    name = name.substr(1, name.length);
+            let room = roomManager.lookupRoomByName(roomInfo.get_name());
+            let sensitive = room == null;
+            let checked = !sensitive;
+            let count = '%d'.format(roomInfo.get_members_count(null));
 
-                let room = roomManager.lookupRoomByName(roomInfo.get_name());
-                let sensitive = room == null;
-                let checked = !sensitive;
-                let count = '%d'.format(roomInfo.get_members_count(null));
+            store.insert_with_valuesv(-1,
+                                      [RoomListColumn.CHECKED,
+                                       RoomListColumn.NAME,
+                                       RoomListColumn.COUNT,
+                                       RoomListColumn.SENSITIVE],
+                                      [checked, name, count, sensitive]);
 
-                store.insert_with_valuesv(-1,
-                                          [RoomListColumn.CHECKED,
-                                           RoomListColumn.NAME,
-                                           RoomListColumn.COUNT,
-                                           RoomListColumn.SENSITIVE],
-                                          [checked, name, count, sensitive]);
-
-                //row.connect('notify::checked', () => { this.notify('can-join'); });
-            });
-            if (this._pendingInfos.length)
-                return GLib.SOURCE_CONTINUE;
-
-            this._timeoutId = 0;
-            this.notify('loading');
-            return GLib.SOURCE_REMOVE;
+            //row.connect('notify::checked', () => { this.notify('can-join'); });
         });
+        this.notify('loading');
     },
 
     _toggleChecked: function(path) {
