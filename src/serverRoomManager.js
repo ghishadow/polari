@@ -1,6 +1,7 @@
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
 const Gtk = imports.gi.Gtk;
+const Pango = imports.gi.Pango;
 const Tp = imports.gi.TelepathyGLib;
 
 const AccountsMonitor = imports.accountsMonitor;
@@ -158,7 +159,7 @@ const ServerRoomList = new Lang.Class({
         column.add_attribute(renderer, 'active', RoomListColumn.CHECKED);
         column.add_attribute(renderer, 'sensitive', RoomListColumn.SENSITIVE);
 
-        renderer = new Gtk.CellRendererText();
+        renderer = new Gtk.CellRendererText({ ellipsize: Pango.EllipsizeMode.END });
 
         column.pack_start(renderer, true);
         column.add_attribute(renderer, 'text', RoomListColumn.NAME);

@@ -140,6 +140,7 @@
                           <object class="Gjs_ServerRoomList" id="serverRoomList">
                             <property name="visible">True</property>
                             <property name="vexpand">True</property>
+                            <property name="hscrollbar-policy">never</property>
                           </object>
                         </child>
                       </object>
